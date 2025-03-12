@@ -20,10 +20,10 @@ def send_notify_by_type(notifier_type, data, content):
                 send_exception_log("[main] Telegram Message Sent Failed")
 
     elif notifier_type == "discord":
-        webhook_urls = data["webhook_url"]
+        webhook_urls = data["webhook_urls"]
 
         for webhook_url in webhook_urls:
-            sent = DiscordHandler(webhook_url).send_message(content)
+            sent = DiscordHandler().send_message(webhook_url, content)
 
             if not sent:
                 send_exception_log("[main] Discord Message Sent Failed")
