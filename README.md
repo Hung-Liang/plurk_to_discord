@@ -59,9 +59,11 @@ APP_ENV=""
 5. Run the script.
 
 ```shell
-pip install -r requirements.txt
-python main.py
+uv sync --no-dev
+uv run main.py
 ```
+
+- You need to have [uv](https://docs.astral.sh/uv/) installed; dependencies are installed from `uv.lock`.
 
 - Notified plurk ids are saved in `asset/ignore/`, so a plurk is only sent once.
 
@@ -75,11 +77,11 @@ python main.py
 
 ## Running tests
 
-- Tests run in a local [uv](https://docs.astral.sh/uv/) virtual environment on Python 3.12, the same version as the Docker image.
+- Tests run in a local [uv](https://docs.astral.sh/uv/) virtual environment, with the same Python version and locked dependencies as the Docker image.
+- To upgrade dependencies, run `uv lock --upgrade` and commit the updated `uv.lock`.
 
 ```bash
-uv venv --python 3.12
-uv pip install -r requirements-dev.txt
+uv sync
 uv run pytest
 ```
 
