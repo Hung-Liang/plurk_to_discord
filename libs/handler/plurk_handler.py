@@ -63,12 +63,18 @@ class PlurkHandler:
         url = oauth.base_url + path
         req = oauth._make_request(url, options)
 
-        res = requests.post(
-            url,
-            headers=req.to_header(),
-            data=options,
-            timeout=REQUEST_TIMEOUT,
-        )
+        try:
+            res = requests.post(
+                url,
+                headers=req.to_header(),
+                data=options,
+                timeout=REQUEST_TIMEOUT,
+            )
+        # Network errors are usually transient, so callers treat this as a
+        # failed request and retry next run instead of failing the job
+        except requests.RequestException as err:
+            log('[plurk_lib]', f'{path}: request failed: {err!r}')
+            return None
 
         if res.status_code != 200:
             log('[plurk_lib]', f'{path}: {res.status_code} {res.text}')

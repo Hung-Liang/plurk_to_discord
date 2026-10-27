@@ -45,6 +45,19 @@ def test_call_api_returns_none_on_error(monkeypatch):
     assert handler.replurk_plurk(1) is False
 
 
+def test_call_api_returns_none_on_network_error(monkeypatch):
+    def fake_post(*args, **kwargs):
+        raise plurk_handler.requests.ConnectionError("ssl eof")
+
+    monkeypatch.setattr(plurk_handler.requests, "post", fake_post)
+
+    handler = PlurkHandler()
+
+    assert handler.find_plurk(minutes=5) is None
+    assert handler.like_plurk(1) is False
+    assert handler.replurk_plurk(1) is False
+
+
 def posted(second):
     return f"Tue, 27 Oct 2026 10:00:{second:02d} GMT"
 
