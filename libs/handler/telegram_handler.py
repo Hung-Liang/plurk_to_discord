@@ -8,6 +8,8 @@ from libs.utils.logger import log
 
 load_dotenv()
 
+REQUEST_TIMEOUT = 10
+
 
 class TelegramHandler:
     """Telegram Handler
@@ -23,6 +25,8 @@ class TelegramHandler:
 
     def __init__(self):
         self.token = os.environ.get("bot_token")
+        self.last_status_code = None
+        self.last_retry_after = None
 
     def send_message(self, cid, message):
         """Send message to Telegram.
@@ -35,14 +39,19 @@ class TelegramHandler:
             True if success, False if fail.
         """
 
-        url = (
-            'https://api.telegram.org/bot{}'
-            '/sendMessage?chat_id={}&parse_mode=HTML&text={}'.format(
-                self.token, cid, message
-            )
-        )
+        url = 'https://api.telegram.org/bot{}/sendMessage'.format(self.token)
+        data = {"chat_id": cid, "parse_mode": "HTML", "text": message}
 
-        res = requests.get(url)
+        res = requests.post(url, data=data, timeout=REQUEST_TIMEOUT)
+        self.last_status_code = res.status_code
+        self.last_retry_after = None
+        if res.status_code == 429:
+            try:
+                self.last_retry_after = (
+                    res.json().get("parameters", {}).get("retry_after")
+                )
+            except ValueError:
+                pass
 
         log(
             '[telegram_lib]',
@@ -66,18 +75,15 @@ class TelegramHandler:
             True if success, False if fail.
         """
 
-        files = {
-            "document": (
-                filename,
-                open(path, 'rb'),
-                'application/octet-stream',
-            ),
-        }
         url = 'https://api.telegram.org/bot{}/sendDocument?chat_id={}'.format(
             self.token, cid
         )
 
-        res = requests.post(url, files=files)
+        with open(path, 'rb') as f:
+            files = {
+                "document": (filename, f, 'application/octet-stream'),
+            }
+            res = requests.post(url, files=files, timeout=REQUEST_TIMEOUT)
 
         log(
             '[telegram_lib]',
@@ -105,7 +111,7 @@ class TelegramHandler:
             '/sendDocument?chat_id={}&document={}'.format(self.token, cid, fid)
         )
 
-        res = requests.post(url)
+        res = requests.post(url, timeout=REQUEST_TIMEOUT)
 
         log(
             '[telegram_lib]',
@@ -131,7 +137,7 @@ class TelegramHandler:
             self.token, fid
         )
 
-        res = requests.post(url)
+        res = requests.post(url, timeout=REQUEST_TIMEOUT)
 
         log(
             '[telegram_lib]',
@@ -144,7 +150,7 @@ class TelegramHandler:
             self.token, file_uri
         )
 
-        res = requests.get(url)
+        res = requests.get(url, timeout=REQUEST_TIMEOUT)
 
         log(
             '[telegram_lib]',

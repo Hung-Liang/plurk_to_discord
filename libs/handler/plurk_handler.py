@@ -1,15 +1,34 @@
 import datetime
+import json
 import os
 
+import requests
 from dotenv import load_dotenv
+from oauth2 import Token
 from plurk_oauth import PlurkAPI
-import json
+
+from libs.utils.logger import log
 
 load_dotenv()
+
+REQUEST_TIMEOUT = 10
+
+CREDENTIAL_KEYS = (
+    "plurk_consumer_key",
+    "plurk_consumer_secret",
+    "plurk_access_token",
+    "plurk_access_token_secret",
+)
 
 
 class PlurkHandler:
     def __init__(self):
+        missing = [key for key in CREDENTIAL_KEYS if not os.environ.get(key)]
+        # plurk_oauth falls back to input() prompts, which hang without a tty
+        if missing:
+            raise ValueError(
+                "Missing plurk credentials in .env: " + ", ".join(missing)
+            )
 
         consumer_key = os.environ.get("plurk_consumer_key")
         consumer_secret = os.environ.get("plurk_consumer_secret")
@@ -18,6 +37,39 @@ class PlurkHandler:
 
         self.plurk = PlurkAPI(consumer_key, consumer_secret)
         self.plurk.authorize(access_token, access_token_secret)
+
+    def call_api(self, path, options):
+        """Call plurk API.
+
+        Args:
+            `path`: API path.
+            `options`: API parameters.
+
+        Returns:
+            Response json if success, None if fail.
+        """
+
+        # plurk_oauth posts without a timeout, so only use it for signing
+        oauth = self.plurk._oauth
+        oauth.token = Token(
+            oauth.oauth_token["oauth_token"],
+            oauth.oauth_token["oauth_token_secret"],
+        )
+        url = oauth.base_url + path
+        req = oauth._make_request(url, options)
+
+        res = requests.post(
+            url,
+            headers=req.to_header(),
+            data=options,
+            timeout=REQUEST_TIMEOUT,
+        )
+
+        if res.status_code != 200:
+            log('[plurk_lib]', f'{path}: {res.status_code} {res.text}')
+            return None
+
+        return res.json()
 
     def get_offset(self, hours=None, minutes=None, seconds=None):
         """Get offset for plurk API
@@ -58,7 +110,7 @@ class PlurkHandler:
 
         offset = self.get_offset(hours, minutes, seconds)
 
-        result = self.plurk.callAPI(
+        result = self.call_api(
             "/APP/Polling/getPlurks",
             options={"offset": offset, "qualifier": ':'},
         )
@@ -75,7 +127,7 @@ class PlurkHandler:
             Plurk content if success, None if fail.
         """
 
-        result = self.plurk.callAPI(
+        result = self.call_api(
             "/APP/Timeline/getPlurk",
             options={"plurk_id": plurk_id},
         )
@@ -94,12 +146,12 @@ class PlurkHandler:
 
         ids = json.dumps([plurk_id])
 
-        result = self.plurk.callAPI(
+        result = self.call_api(
             "/APP/Timeline/favoritePlurks",
             options={"ids": ids},
         )
 
-        if result["success_text"] == 'ok':
+        if result and result.get("success_text") == 'ok':
             return True
         else:
             return False
@@ -116,12 +168,12 @@ class PlurkHandler:
 
         ids = json.dumps([plurk_id])
 
-        result = self.plurk.callAPI(
+        result = self.call_api(
             "/APP/Timeline/replurk",
             options={"ids": ids},
         )
 
-        if result["success"]:
+        if result and result.get("success"):
             return True
         else:
             return False
