@@ -17,6 +17,14 @@ TELEGRAM_ADMIN_ID = os.environ.get("telegram_admin_id")
 TELEGRAM_MESSAGE_LIMIT = 4096
 
 
+def send_service_start_notification():
+    """Send Service Start Notification to Telegram Admin"""
+
+    message = "🚀 <b>Service Started</b>"
+
+    TelegramHandler().send_message(TELEGRAM_ADMIN_ID, message)
+
+
 def send_daily_log():
     """Send Daily Log to Telegram Admin"""
 
