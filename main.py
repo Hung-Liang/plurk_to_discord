@@ -20,7 +20,7 @@ for group_name, group in groups.items():
         send_plurk_updates,
         'cron',
         minute=get_interval_str(interval),
-        args=[group, interval],
+        args=[group_name, group],
     )
 
 scheduler.add_job(

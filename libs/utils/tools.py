@@ -1,4 +1,5 @@
 import html
+import json
 import os
 from pathlib import Path
 
@@ -82,39 +83,103 @@ def format_exception_message(e):
         text = "...\n" + text[-(len(text) * 9 // 10):]
 
 
-def find_raw_content_by_user_id(owner_id, plurks):
-    """Find raw content by user id
+def load_json(path):
+    """Load Json from Select File
+
+    Args:
+        `path`: File path
+
+    Returns:
+        A Json Object of Select File
+    """
+    with open(path, encoding='utf-8') as f:
+        data = json.load(f)
+    return data
+
+
+def save_json(path, data):
+    """Save Json to Select File
+
+    Args:
+        `path`: File path
+        `data`: Json data
+    """
+    # Write to a temp file then swap, so a crash never leaves a broken file
+    tmp_path = Path(f"{path}.tmp")
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, path)
+
+
+def load_ignore_json(json_path):
+    """Load Ignore Json
+
+    Returns:
+        A dict of notified plurk ids
+    """
+
+    if not Path(json_path).exists():
+        return {}
+
+    ignore_list = load_json(json_path)
+
+    if len(ignore_list) > 100:
+        ignore_list = dict(list(ignore_list.items())[-50:])
+
+    return ignore_list
+
+
+def mark_notified(json_path, plurk_id, content):
+    """Record a plurk in the ignore json so it is not sent again.
+
+    Args:
+        `json_path`: Ignore Json Path
+        `plurk_id`: Plurk ID
+        `content`: Plurk raw content
+    """
+    ignore_list = load_ignore_json(json_path)
+    ignore_list[str(plurk_id)] = content
+    save_json(json_path, ignore_list)
+
+
+def find_new_plurks(owner_id, plurks, ignore_list):
+    """Find the owner's plurks that were not notified yet.
 
     Args:
         `owner_id`: User id.
         `plurks`: Plurk results.
+        `ignore_list`: Notified plurk ids.
 
     Returns:
-        Raw content list.
+        Plurk list, oldest first.
     """
 
-    raw_contents = []
+    new_plurks = {}
     for plurk in plurks:
-        if plurk["owner_id"] == int(owner_id):
-            raw_contents.append(plurk["content_raw"])
+        plurk_id = str(plurk["plurk_id"])
+        if plurk["owner_id"] != int(owner_id) or plurk_id in ignore_list:
+            continue
+        # Pages may overlap on the same second
+        new_plurks[plurk_id] = plurk
 
-    return raw_contents
+    return sorted(new_plurks.values(), key=lambda plurk: plurk["plurk_id"])
 
 
-def find_plurk_id_by_user_id(owner_id, plurks):
-    """Find plurk id by user id
+def get_message(notifier_type, content):
+    """Get Message for one notifier type
 
     Args:
-        `owner_id`: User id.
-        `plurks`: Plurk results.
+        `notifier_type`: "telegram" or "discord"
+        `content`: Plurk raw content
 
     Returns:
-        Plurk id list.
+        A Message for the notifier type
     """
+    if notifier_type == "telegram":
+        return html.escape(content, quote=False)
+    elif notifier_type == "discord":
+        return content
 
-    plurk_ids = []
-    for plurk in plurks:
-        if plurk["owner_id"] == int(owner_id):
-            plurk_ids.append(plurk["plurk_id"])
-
-    return plurk_ids
+    raise ValueError(f"Unknown notifier_type: {notifier_type}")

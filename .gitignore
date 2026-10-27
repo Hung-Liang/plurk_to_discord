@@ -4,3 +4,4 @@ libs/config.py
 __pycache__
 .venv/
 .pytest_cache/
+asset/

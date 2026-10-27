@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+from email.utils import parsedate_to_datetime
 
 import requests
 from dotenv import load_dotenv
@@ -12,6 +13,10 @@ from libs.utils.logger import log
 load_dotenv()
 
 REQUEST_TIMEOUT = 10
+
+# getPlurks returns 20 plurks unless limit is set
+POLL_LIMIT = 20
+MAX_POLL_PAGES = 5
 
 CREDENTIAL_KEYS = (
     "plurk_consumer_key",
@@ -105,17 +110,39 @@ class PlurkHandler:
             `seconds`: Seconds to find.
 
         Returns:
-            Plurk content if success, None if fail.
+            Plurk list if success, None if fail.
         """
 
         offset = self.get_offset(hours, minutes, seconds)
+        plurks = []
 
-        result = self.call_api(
-            "/APP/Polling/getPlurks",
-            options={"offset": offset, "qualifier": ':'},
-        )
+        for _ in range(MAX_POLL_PAGES):
+            result = self.call_api(
+                "/APP/Polling/getPlurks",
+                options={
+                    "offset": offset,
+                    "limit": POLL_LIMIT,
+                    "qualifier": ':',
+                },
+            )
+            if result is None:
+                return None
 
-        return result
+            page = result.get("plurks", [])
+            plurks += page
+            if len(page) < POLL_LIMIT:
+                return plurks
+
+            # The sort order is undocumented, so page on the newest posted
+            newest = max(
+                parsedate_to_datetime(plurk["posted"]) for plurk in page
+            ).strftime("%Y-%m-%dT%H:%M:%S")
+            if newest <= offset:
+                return plurks
+            offset = newest
+
+        log('[plurk_lib]', f'getPlurks stopped after {MAX_POLL_PAGES} pages')
+        return plurks
 
     def get_plurk(self, plurk_id):
         """Get plurk by id
