@@ -65,6 +65,16 @@ python main.py
 
 - Notified plurk ids are saved in `asset/ignore/`, so a plurk is only sent once.
 
+## Running tests
+
+- Tests run in a local [uv](https://docs.astral.sh/uv/) virtual environment on Python 3.12, the same version as the Docker image.
+
+```bash
+uv venv --python 3.12
+uv pip install -r requirements-dev.txt
+uv run pytest
+```
+
 ## Support me
 
 <a href="https://www.buymeacoffee.com/hungliang" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
