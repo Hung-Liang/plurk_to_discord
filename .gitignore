@@ -2,3 +2,5 @@
 libs/config.py
 /log
 __pycache__
+.venv/
+.pytest_cache/

@@ -31,20 +31,14 @@ class PlurkHandler:
             Offset string.
         """
 
-        offset = "now"
+        offset = datetime.datetime.now(datetime.timezone.utc)
 
         if hours is not None:
-            offset = datetime.datetime.utcnow() - datetime.timedelta(
-                hours=hours
-            )
+            offset -= datetime.timedelta(hours=hours)
         elif minutes is not None:
-            offset = datetime.datetime.utcnow() - datetime.timedelta(
-                minutes=minutes
-            )
+            offset -= datetime.timedelta(minutes=minutes)
         elif seconds is not None:
-            offset = datetime.datetime.utcnow() - datetime.timedelta(
-                seconds=seconds
-            )
+            offset -= datetime.timedelta(seconds=seconds)
 
         offset = offset.strftime("%Y-%m-%dT%H:%M:%S")
 
