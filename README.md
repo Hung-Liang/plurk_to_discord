@@ -65,6 +65,14 @@ python main.py
 
 - Notified plurk ids are saved in `asset/ignore/`, so a plurk is only sent once.
 
+## Run with Docker
+
+- Put `.env` in the root folder and `config.py` in the `config` folder, then run `scripts/deploy.sh`.
+  - It tags the current image as `plurk_to_discord:prev`, builds a new one, checks the config, and restarts the container.
+- `config/`, `asset/` and `log/` are mounted from the host, so they survive rebuilds.
+- After changing the config, run `docker compose restart notifier`.
+- Rollback: `docker tag plurk_to_discord:prev plurk_to_discord:latest && docker compose up -d`.
+
 ## Running tests
 
 - Tests run in a local [uv](https://docs.astral.sh/uv/) virtual environment on Python 3.12, the same version as the Docker image.
