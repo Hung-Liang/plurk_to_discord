@@ -67,6 +67,14 @@ def send_notify_by_type(notifier_type, data, content):
         # One unreachable recipient must not block the others
         try:
             delivered.append(send_to_user(handler, message, user))
+        # The request was sent but the reply was lost, so the message has
+        # likely arrived; count it as delivered to avoid a duplicate resend
+        except requests.ReadTimeout as err:
+            send_exception_log(
+                f"[main] {notifier_type.capitalize()} Message Delivery Unknown"
+                f" (recipient #{index}, {type(err).__name__})"
+            )
+            delivered.append(True)
         except requests.RequestException as err:
             # Only the error type: its message may contain the bot token
             # or webhook url

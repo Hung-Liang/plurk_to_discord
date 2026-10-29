@@ -145,6 +145,21 @@ def test_one_recipient_error_does_not_block_others(monkeypatch, exceptions):
     assert "secret" not in exceptions[0]
 
 
+def test_read_timeout_counts_as_delivered(monkeypatch, exceptions):
+    handler = FakeHandler([requests.ReadTimeout("https://secret/url")])
+    monkeypatch.setattr(notify, "DiscordHandler", lambda: handler)
+
+    delivered = notify.send_notify_by_type(
+        "discord", {"webhook_urls": ["a"]}, "hi"
+    )
+
+    assert delivered == [True]
+    assert handler.calls == ["a"]
+    assert len(exceptions) == 1
+    assert "ReadTimeout" in exceptions[0]
+    assert "secret" not in exceptions[0]
+
+
 def test_telegram_reads_recipient_ids(monkeypatch, exceptions):
     handler = FakeHandler([(204, None)])
     monkeypatch.setattr(notify, "TelegramHandler", lambda: handler)
