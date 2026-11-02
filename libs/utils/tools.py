@@ -20,7 +20,7 @@ TELEGRAM_MESSAGE_LIMIT = 4096
 def send_service_start_notification():
     """Send Service Start Notification to Telegram Admin"""
 
-    message = "🚀 <b>Service Started</b>"
+    message = "🚀 <b>Plurk to Discord Started</b>"
 
     TelegramHandler().send_message(TELEGRAM_ADMIN_ID, message)
 
